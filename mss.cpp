@@ -47,6 +47,19 @@ void mergeLists(int *myNums, int *neighNums, int myCount, int neighCount) {
     copy(ordered.begin() + myCount, ordered.end(), neighNums);
 }
 
+// print input unordered sequence 
+void printUnorderedSeq(vector<int> numbers) {
+    for (vector<int>::size_type i = 0; i != numbers.size() - 1; i++)
+        cout << numbers[i] << " ";
+    cout << endl;
+}
+
+// send current proccesor's numbers to processor procID
+void sendMyNumbers(int procID, int myCount, int *myNums) {
+    MPI_Send(&myCount, 1, MPI_INT, procID, TAG, MPI_COMM_WORLD);
+    MPI_Send(myNums, myCount, MPI_INT, procID, TAG, MPI_COMM_WORLD);
+}
+
 // read numbers from input file and send them to appropriate processors
 void distributeInputValues(int myID, int numprocs) {
     int numsPerProc;                            // numbers per processor
@@ -75,19 +88,6 @@ void distributeInputValues(int myID, int numprocs) {
         sendFromIdx += numsPerProc;
     }
     fin.close();                                
-}
-
-// print input unordered sequence 
-void printUnorderedSeq(vector<int> numbers) {
-    for (vector<int>::size_type i = 0; i != numbers.size() - 1; i++)
-        cout << numbers[i] << " ";
-    cout << endl;
-}
-
-// send current proccesor's numbers to processor procID
-void sendMyNumbers(int procID, int myCount, int *myNums) {
-    MPI_Send(&myCount, 1, MPI_INT, procID, TAG, MPI_COMM_WORLD);
-    MPI_Send(myNums, myCount, MPI_INT, procID, TAG, MPI_COMM_WORLD);
 }
 
 // send current proccesor's numbers to processor neighID and wait for a half ofordered sequence
