@@ -2,6 +2,7 @@
 // Author: Nikola Valesova, xvales02
 // Date: 8. 4. 2018
 
+
 #include <mpi.h>
 #include <iostream>
 #include <fstream>
