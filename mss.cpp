@@ -20,7 +20,6 @@ MPI_Status stat;            // struct for storing MPI transaction result
 
 // output ordered sequence
 void printResult(vector<int> ordered) {
-    // cout << cycles << endl;
     for (int i = 0; i < ordered.size(); i++)
         cout << ordered[i] << endl;
 }
@@ -56,7 +55,7 @@ void printUnorderedSeq(vector<int> numbers) {
 }
 
 // send current proccesor's numbers to processor procID
-void sendMyNumbers(int procID, int myCount, int *myNums) {
+void sendNumbers(int procID, int myCount, int *myNums) {
     MPI_Send(&myCount, 1, MPI_INT, procID, TAG, MPI_COMM_WORLD);
     MPI_Send(myNums, myCount, MPI_INT, procID, TAG, MPI_COMM_WORLD);
 }
@@ -77,7 +76,7 @@ void distributeInputValues(int myID, int numprocs) {
     printUnorderedSeq(numbers);
 
     numsPerProc = ceil((float(numbers.size() - 1)) / numprocs);
-    procsWithMoreNums = (numbers.size() - 1) % numprocs;  // tolik procs dostane plnej pocet cisel, dalsi o jedna min 
+    procsWithMoreNums = (numbers.size() - 1) % numprocs;
     if (procsWithMoreNums != 0)
         procsWithMoreNums++;
 
@@ -85,7 +84,7 @@ void distributeInputValues(int myID, int numprocs) {
     for (int i = 0; i < numprocs; i++) {
         if (i == procsWithMoreNums - 1)
             numsPerProc--;
-        sendMyNumbers(i, numsPerProc, &numbers[sendFromIdx]);
+        sendNumbers(i, numsPerProc, &numbers[sendFromIdx]);
         sendFromIdx += numsPerProc;
     }
     fin.close();                                
@@ -93,7 +92,7 @@ void distributeInputValues(int myID, int numprocs) {
 
 // send current proccesor's numbers to processor neighID and wait for a half ofordered sequence
 void waitForOrdered(int neighID, int count, int *myNums) {
-    sendMyNumbers(neighID, count, myNums);
+    sendNumbers(neighID, count, myNums);
     MPI_Recv(myNums, count, MPI_INT, neighID, TAG, MPI_COMM_WORLD, &stat);
 }
 
@@ -136,15 +135,13 @@ void executeEvenStep(int myID, int numprocs, int myCount, int *myNums) {
 
 // order input numbers
 void orderSequence(int myID, int numprocs, int myCount, int *myNums) {
-    int halfcycles = ceil(numprocs / 2.0);
-    int cycles = 0;
+    int halfcycles = ceil(numprocs / 2.0) + 1;
 
     // sort given numbers
     sort(myNums, myNums + myCount);
 
     // execute sorting algorithm
-    for (int j = 1; j <= halfcycles; j++) {
-        cycles++;
+    for (int j = 0; j < halfcycles; j++) {
         executeOddStep(myID, numprocs, myCount, myNums);
         executeEvenStep(myID, numprocs, myCount, myNums);
     }
@@ -158,7 +155,7 @@ vector<int> finalStage(int myID, int numprocs, int myCount, int *myNums) {
     for (int i = 1; i < numprocs; i++) {
         // send numbers
         if (myID == i)
-            sendMyNumbers(0, myCount, myNums);
+            sendNumbers(0, myCount, myNums);
 
         // receive numbers
         if (myID == 0) {
@@ -191,11 +188,6 @@ int main(int argc, char *argv[])
     MPI_Recv(&myCount, 1, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
     int myNums[myCount];
     MPI_Recv(&myNums, myCount, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
-    // TODO remove after debugging
-    // cout << "i am: " << myID << " my numbers are: ";
-    // for (int x = 0; x < myCount; x++)
-    //     cout << myNums[x] << ", ";
-    // cout << endl;
 
     // order assigned numbers
     orderSequence(myID, numprocs, myCount, myNums);
@@ -217,5 +209,3 @@ int main(int argc, char *argv[])
     MPI_Finalize(); 
     return 0;
 }
-
-// TODO remove cycles
