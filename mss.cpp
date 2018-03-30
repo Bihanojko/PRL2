@@ -1,6 +1,6 @@
 // Project: Merge-splitting sort
-// Author: Nikola Valesova, xvales02
-// Date: 8. 4. 2018
+// Author:  Nikola Valesova, xvales02
+// Date:    8. 4. 2018
 
 
 #include <mpi.h>
@@ -60,18 +60,26 @@ void sendNumbers(int procID, int myCount, int *myNums) {
     MPI_Send(myNums, myCount, MPI_INT, procID, TAG, MPI_COMM_WORLD);
 }
 
+vector<int> getInputSequence() {
+    vector<int> numbers;                        // input numbers to order    
+    fstream fin;                                // input filestream
+    fin.open("numbers", ios::in);                   
+    // read file
+    while (fin.good())
+        numbers.push_back(fin.get());
+    fin.close();        
+    return numbers;
+}
+
 // read numbers from input file and send them to appropriate processors
 void distributeInputValues(int myID, int numprocs) {
     int numsPerProc;                            // numbers per processor
     int procsWithMoreNums;                      // number of processors that will have more numbers
     int sendFromIdx = 0;                        // index of first number being sent
     vector<int> numbers;                        // input numbers to order
-    fstream fin;                                // input filestream
-    fin.open("numbers", ios::in);                   
 
     // read file
-    while (fin.good())
-        numbers.push_back(fin.get());
+    numbers = getInputSequence();
     // output unordered sequence
     printUnorderedSeq(numbers);
 
@@ -87,7 +95,6 @@ void distributeInputValues(int myID, int numprocs) {
         sendNumbers(i, numsPerProc, &numbers[sendFromIdx]);
         sendFromIdx += numsPerProc;
     }
-    fin.close();                                
 }
 
 // send current proccesor's numbers to processor neighID and wait for a half ofordered sequence
