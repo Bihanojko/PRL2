@@ -60,6 +60,7 @@ void sendNumbers(int procID, int myCount, int *myNums) {
     MPI_Send(myNums, myCount, MPI_INT, procID, TAG, MPI_COMM_WORLD);
 }
 
+// get numbers from input file
 vector<int> getInputSequence() {
     vector<int> numbers;                        // input numbers to order    
     fstream fin;                                // input filestream
