@@ -72,32 +72,6 @@ vector<int> getInputSequence() {
     return numbers;
 }
 
-// read numbers from input file and send them to appropriate processors
-void distributeInputValues(int myID, int numprocs) {
-    int numsPerProc;                            // numbers per processor
-    int procsWithMoreNums;                      // number of processors that will have more numbers
-    int sendFromIdx = 0;                        // index of first number being sent
-    vector<int> numbers;                        // input numbers to order
-
-    // read file
-    numbers = getInputSequence();
-    // output unordered sequence
-    printUnorderedSeq(numbers);
-
-    numsPerProc = ceil((float(numbers.size() - 1)) / numprocs);
-    procsWithMoreNums = (numbers.size() - 1) % numprocs;
-    if (procsWithMoreNums != 0)
-        procsWithMoreNums++;
-
-    // send assigned amount of numbers to every processor
-    for (int i = 0; i < numprocs; i++) {
-        if (i == procsWithMoreNums - 1)
-            numsPerProc--;
-        sendNumbers(i, numsPerProc, &numbers[sendFromIdx]);
-        sendFromIdx += numsPerProc;
-    }
-}
-
 // send current proccesor's numbers to processor neighID and wait for a half ofordered sequence
 void waitForOrdered(int neighID, int count, int *myNums) {
     sendNumbers(neighID, count, myNums);
@@ -183,19 +157,59 @@ int main(int argc, char *argv[])
     int numprocs;               // number of processors
     int myID;                   // my processor id
     int myCount;                // my count of given numbers to order
+    vector<int> numbers;        // input numbers to order
+    int numsPerProc;            // numbers per processor
+    int procsWithMoreNums;      // number of processors that will have more numbers
 
     // MPI initialization
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myID);
  
-    if (myID == 0)
-        distributeInputValues(myID, numprocs);
+    // read numbers from input file and send them to appropriate processors 
+    if (myID == 0) {
+        int sendFromIdx = 0;    // index of first number being sent
+        // read file
+        numbers = getInputSequence();
+        // output unordered sequence
+        printUnorderedSeq(numbers);
 
-    // receive assigned values
+        numsPerProc = ceil((float(numbers.size() - 1)) / numprocs);
+        procsWithMoreNums = (numbers.size() - 1) % numprocs;
+        if (procsWithMoreNums != 0)
+            procsWithMoreNums++;
+
+        // send amount of numbers assigned to processor
+        for (int i = 0; i < numprocs; i++) {
+            if (i == procsWithMoreNums - 1)
+                numsPerProc--;
+            MPI_Send(&numsPerProc, 1, MPI_INT, i, TAG, MPI_COMM_WORLD);
+            sendFromIdx += numsPerProc;
+        }
+    }
+
+    // receive assigned number of values
     MPI_Recv(&myCount, 1, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
     int myNums[myCount];
-    MPI_Recv(&myNums, myCount, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
+
+    if (myID == 0) {
+        int sendFromIdx = 0;     // index of first number being sent
+        numsPerProc = ceil((float(numbers.size() - 1)) / numprocs);
+
+        // send assigned numbers to every processor
+        for (int i = 0; i < numprocs; i++) {
+            if (i == procsWithMoreNums - 1)
+                numsPerProc--;
+            if (i == 0)
+                memcpy(myNums, &numbers[sendFromIdx], sizeof(int) * numsPerProc);                
+            else
+                MPI_Send(&numbers[sendFromIdx], numsPerProc, MPI_INT, i, TAG, MPI_COMM_WORLD);
+            sendFromIdx += numsPerProc;
+        }
+    }
+    // receive assigned values
+    else
+        MPI_Recv(&myNums, myCount, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
 
     // order assigned numbers
     orderSequence(myID, numprocs, myCount, myNums);
