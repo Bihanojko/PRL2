@@ -61,15 +61,13 @@ void sendNumbers(int procID, int myCount, int *myNums) {
 }
 
 // get numbers from input file
-vector<int> getInputSequence() {
-    vector<int> numbers;                        // input numbers to order    
+void getInputSequence(vector<int> &numbers) {
     fstream fin;                                // input filestream
     fin.open("numbers", ios::in);                   
     // read file
     while (fin.good())
         numbers.push_back(fin.get());
-    fin.close();        
-    return numbers;
+    fin.close();
 }
 
 // send current proccesor's numbers to processor neighID and wait for a half ofordered sequence
@@ -85,14 +83,15 @@ void receiveAndOrder(int neighID, int myCount, int *myNums) {
     // receive numbers from neighbour
     int neighCount;             // number of values being returned from neighbour    
     MPI_Recv(&neighCount, 1, MPI_INT, neighID, TAG, MPI_COMM_WORLD, &stat);
-    int neighNums[neighCount];
-    MPI_Recv(&neighNums, neighCount, MPI_INT, neighID, TAG, MPI_COMM_WORLD, &stat);
+    int *neighNums = new int [neighCount];
+    MPI_Recv(neighNums, neighCount, MPI_INT, neighID, TAG, MPI_COMM_WORLD, &stat);
 
     // merge my numbers with neighbour's
     mergeLists(myNums, neighNums, myCount, neighCount);
 
     // send neighbour second half of ordered numbers
-    MPI_Send(&neighNums, neighCount, MPI_INT, neighID, TAG, MPI_COMM_WORLD);
+    MPI_Send(neighNums, neighCount, MPI_INT, neighID, TAG, MPI_COMM_WORLD);
+    delete[] neighNums;
 }
 
 // execute odd step of ordering algorithm
@@ -142,9 +141,10 @@ vector<int> finalStage(int myID, int numprocs, int myCount, int *myNums) {
         // receive numbers
         if (myID == 0) {
             MPI_Recv(&neighCount, 1, MPI_INT, i, TAG, MPI_COMM_WORLD, &stat);
-            int neighNums[neighCount];
-            MPI_Recv(&neighNums, neighCount, MPI_INT, i, TAG, MPI_COMM_WORLD, &stat);
+            int *neighNums = new int [neighCount];
+            MPI_Recv(neighNums, neighCount, MPI_INT, i, TAG, MPI_COMM_WORLD, &stat);
             ordered.insert(ordered.end(), neighNums, neighNums + neighCount);
+            delete[] neighNums;
         }
     }
     return ordered;
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     if (myID == 0) {
         int sendFromIdx = 0;    // index of first number being sent
         // read file
-        numbers = getInputSequence();
+        getInputSequence(numbers);
         // output unordered sequence
         printUnorderedSeq(numbers);
 
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 
     // receive assigned number of values
     MPI_Recv(&myCount, 1, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
-    int myNums[myCount];
+    int *myNums = new int [myCount];
 
     if (myID == 0) {
         int sendFromIdx = 0;     // index of first number being sent
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
     }
     // receive assigned values
     else
-        MPI_Recv(&myNums, myCount, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
+        MPI_Recv(myNums, myCount, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
 
     // order assigned numbers
     orderSequence(myID, numprocs, myCount, myNums);
@@ -229,5 +229,6 @@ int main(int argc, char *argv[])
         printResult(ordered);
 
     MPI_Finalize(); 
+    delete[] myNums;
     return 0;
 }
