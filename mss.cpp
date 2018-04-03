@@ -49,8 +49,9 @@ void mergeLists(int *myNums, int *neighNums, int myCount, int neighCount) {
 
 // print input unordered sequence 
 void printUnorderedSeq(vector<int> numbers) {
-    for (vector<int>::size_type i = 0; i != numbers.size() - 1; i++)
+    for (vector<int>::size_type i = 0; i != numbers.size() - 2; i++)
         cout << numbers[i] << " ";
+    cout << numbers[numbers.size() - 2];
     cout << endl;
 }
 
@@ -228,7 +229,7 @@ int main(int argc, char *argv[])
     if (myID == 0)
         printResult(ordered);
 
-    MPI_Finalize(); 
+    MPI_Finalize();
     delete[] myNums;
     return 0;
 }
