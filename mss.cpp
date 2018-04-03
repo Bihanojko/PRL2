@@ -173,7 +173,8 @@ int main(int argc, char *argv[])
         // read file
         getInputSequence(numbers);
         // output unordered sequence
-        printUnorderedSeq(numbers);
+        if (numbers.size() > 1)
+            printUnorderedSeq(numbers);
 
         numsPerProc = ceil((float(numbers.size() - 1)) / numprocs);
         procsWithMoreNums = (numbers.size() - 1) % numprocs;
